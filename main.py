@@ -42,6 +42,7 @@ class Running_cactus(pygame.sprite.Sprite):
         self.g = 0.6
         self.image = self.frames[self.cur_frame]
         self.rect = self.rect.move(x, y)
+        self.mask = pygame.mask.from_surface(self.image)
 
     def cut_sheet(self, sheet, columns, rows):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
@@ -67,7 +68,6 @@ class Running_cactus(pygame.sprite.Sprite):
         global GAME_RUNNING
         self.cur_frame = (self.cur_frame + 1) % len(self.frames)
         self.image = self.frames[self.cur_frame]
-        self.mask = pygame.mask.from_surface(self.image)
         self.g += 0.0002
         if pygame.sprite.collide_mask(self, enemy):
             print(1)
@@ -82,6 +82,7 @@ class Enemy(pygame.sprite.Sprite):
         self.cur_frame = 0
         self.image = self.frames[self.cur_frame]
         self.rect = self.rect.move(1200, 450)
+        self.mask = pygame.mask.from_surface(self.image)
 
     def cut_sheet(self, sheet, columns, rows):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
@@ -96,10 +97,12 @@ class Enemy(pygame.sprite.Sprite):
     def update(self):
         self.cur_frame = (self.cur_frame + 1) % len(self.frames)
         self.image = self.frames[self.cur_frame]
-        self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.rect.move(V, 0)
         if self.rect[0] <= -100:
             self.rect[0] = 1300
+
+    def reload(self):
+        self.rect[0] = 1300
 
 
 def load_image(name, colorkey=None):
@@ -141,11 +144,17 @@ if __name__ == '__main__':
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                jumping = True
+                if GAME_RUNNING is True:
+                    jumping = True
+                elif 550 <= event.pos[0] <= 740 and 300 <= event.pos[1] <= 490:
+                    GAME_RUNNING = True
+                    V = -3
+                    enemy.reload()
+                    score = 0
 
         all_sprites.draw(screen)
 
-        pygame.draw.rect(screen, 'white', ((940, 110), (235, 100)), 100)
+        pygame.draw.rect(screen, 'white', ((940, 110), (255, 100)), 100)
         font.render_to(screen, (1000, 170), f'Счёт: {str(round(score))}', (0, 0, 0))
         if round(score) < best_score:
             font.render_to(screen, (950, 120), f'Рекорд: {str(best_score)}', (0, 0, 0))
@@ -156,6 +165,7 @@ if __name__ == '__main__':
             enemy.update()
             background1.update()
             background2.update()
+            pygame.mouse.set_visible(False)
 
             score += -V / 100
             V -= 0.005
@@ -165,15 +175,18 @@ if __name__ == '__main__':
             else:
                 cactus.update()
         else:
+            pygame.mouse.set_visible(True)
             pygame.draw.rect(screen, 'white', ((490, 190), (320, 55)), 100)
             font.render_to(screen, (500, 200), f'Игра окончена!', (0, 0, 0))
-            if round(score) > best_score:
+            if round(score) >= best_score:
                 record = open('record.txt', 'w')
                 record.write(str(round(score)))
                 record.close()
                 pygame.draw.rect(screen, 'white', ((490, 240), (320, 55)), 100)
                 font.render_to(screen, (500, 250), f'Новый рекорд!', (0, 0, 0))
-
+                best_score = round(score)
+            restart = load_image('restart.png')
+            screen.blit(restart, (520, 270))
         clock.tick(30)
         pygame.display.flip()
     pygame.quit()
